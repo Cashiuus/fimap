@@ -212,7 +212,7 @@ class report:
         return(url)
 
     def autoDetectLanguageByExtention(self, languageSets):
-        for Name, langClass in languageSets.items():
+        for Name, langClass in list(languageSets.items()):
             exts = langClass.getExtentions()
             for ext in exts:
                 if (self.URL.find(ext) != -1):

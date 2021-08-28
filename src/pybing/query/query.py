@@ -10,7 +10,7 @@
 This module holds the base Query class used by the various types of Bing queries.
 """
 
-import copy, urllib, httplib2
+import copy, urllib.request, urllib.parse, urllib.error, httplib2
 
 # Issue #1 (http://code.google.com/p/pybing/issues/detail?id=1)
 # Python 2.6 has json built in, 2.5 needs simplejson
@@ -33,7 +33,7 @@ class BingQuery(QueryMixin):
     
     def set_query(self, query):
         if not query:
-            raise ValueError, 'Query cannot be empty or None'
+            raise ValueError('Query cannot be empty or None')
         
         obj = self._clone()
         obj._query = query
@@ -45,10 +45,10 @@ class BingQuery(QueryMixin):
     
     def execute(self):
         if not self.query:
-            raise ValueError, 'Query cannot be empty or None'
+            raise ValueError('Query cannot be empty or None')
         
         elif not self.SOURCE_TYPE:
-            raise ValueError, 'Source Type cannot be empty or None'
+            raise ValueError('Source Type cannot be empty or None')
         
         from pybing.resultset import BingResultSet
         return BingResultSet(self)
@@ -64,7 +64,7 @@ class BingQuery(QueryMixin):
         return params
     
     def get_request_url(self):
-        query_string = urllib.urlencode(self.get_request_parameters())
+        query_string = urllib.parse.urlencode(self.get_request_parameters())
         return constants.JSON_ENDPOINT + '?' + query_string
     
     def get_search_response(self):
@@ -93,4 +93,4 @@ class BingQuery(QueryMixin):
     __str__ = __unicode__
     
     def __repr__(self):
-        return '<%s>' % unicode(self)
+        return '<%s>' % str(self)

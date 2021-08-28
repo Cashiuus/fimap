@@ -10,9 +10,9 @@
 
 import random
 import socket
-import urllib
-import urllib2
-import httplib
+import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.error, urllib.parse
+import http.client
 import ssl
 
 ctx = ssl.create_default_context()
@@ -48,7 +48,7 @@ class BrowserError(Exception):
         self.url = url
         self.error = error
 
-class PoolHTTPConnection(httplib.HTTPConnection):
+class PoolHTTPConnection(http.client.HTTPConnection):
     def connect(self):
         """Connect to the host and port specified in __init__."""
         msg = "getaddrinfo returns an empty list"
@@ -58,21 +58,21 @@ class PoolHTTPConnection(httplib.HTTPConnection):
             try:
                 self.sock = socket.socket(af, socktype, proto)
                 if self.debuglevel > 0:
-                    print "connect: (%s, %s)" % (self.host, self.port)
+                    print("connect: (%s, %s)" % (self.host, self.port))
                 self.sock.settimeout(TIMEOUT)
                 self.sock.connect(sa)
-            except socket.error, msg:
+            except socket.error as msg:
                 if self.debuglevel > 0:
-                    print 'connect fail:', (self.host, self.port)
+                    print('connect fail:', (self.host, self.port))
                 if self.sock:
                     self.sock.close()
                 self.sock = None
                 continue
             break
         if not self.sock:
-            raise socket.error, msg
+            raise socket.error(msg)
 
-class PoolHTTPHandler(urllib2.HTTPHandler):
+class PoolHTTPHandler(urllib.request.HTTPHandler):
     def http_open(self, req):
         return self.do_open(PoolHTTPConnection, req)
 
@@ -87,17 +87,17 @@ class Browser(object):
 
     def get_page(self, url, data=None):
         handlers = [PoolHTTPHandler]
-        opener = urllib2.build_opener(urllib2.HTTPSHandler(context=ctx), *handlers)
-        if data: data = urllib.urlencode(data)
-        request = urllib2.Request(url, data, self.headers)
+        opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx), *handlers)
+        if data: data = urllib.parse.urlencode(data)
+        request = urllib.request.Request(url, data, self.headers)
         try:
             response = opener.open(request)
             return response.read()
-        except (urllib2.HTTPError, urllib2.URLError), e:
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
             raise BrowserError(url, str(e))
-        except (socket.error, socket.sslerror), msg:
+        except (socket.error, socket.sslerror) as msg:
             raise BrowserError(url, msg)
-        except socket.timeout, e:
+        except socket.timeout as e:
             raise BrowserError(url, "timeout")
         except:
             raise BrowserError(url, "unknown error")

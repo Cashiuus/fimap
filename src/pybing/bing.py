@@ -11,7 +11,7 @@ This module holds the Bing class which is used to create and execute queries
 against Bing.
 """
 
-import urllib, httplib2
+import urllib.request, urllib.parse, urllib.error, httplib2
 
 # Issue #1 (http://code.google.com/p/pybing/issues/detail?id=1)
 # Python 2.6 has json built in, 2.5 needs simplejson
@@ -35,7 +35,7 @@ class Bing(object):
         if extra_params:
             kwargs.update(extra_params)
         
-        query_string = urllib.urlencode(kwargs)
+        query_string = urllib.parse.urlencode(kwargs)
         response, contents = httplib2.Http().request(constants.JSON_ENDPOINT + '?' + query_string)
         return json.loads(contents)
     

@@ -18,31 +18,33 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+import ntpath
+import os
+import os.path
+import pickle
+import posixpath
+import random
+import shutil
+import socket
+import ssl
+import string
+import sys
 from tempfile import mkstemp
 from ftplib import FTP
 from ftplib import error_perm
-from config import settings
 import xml.dom.minidom
 from base64 import b64encode
-import pickle
-import ntpath
+import urllib.request, urllib.parse, urllib.error, http.client, copy, urllib.request, urllib.error, urllib.parse
+
 import baseTools
-import shutil
-import posixpath
-import os.path
-import sys
-
-DEFAULT_AGENT = "fimap.googlecode.com"
-
-import urllib, httplib, copy, urllib2
-import string,random,os,socket, os.path
+from config import settings
 
 __author__="Iman Karim(ikarim2s@smail.inf.fh-brs.de)"
 __date__ ="$30.08.2009 20:02:04$"
 
-import urllib2
-import ssl
-import string,random,os,socket
+#DEFAULT_AGENT = "fimap_scanner/github.com/Cashiuus/fimap"
+DEFAULT_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'
+
 
 new_stuff = {}
 
@@ -50,21 +52,21 @@ ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
+
 class baseClass (object):
-    
     XML_Result  = None
     XML_RootItem = None
     homeDir = os.path.expanduser("~")
-    
+
     LOG_ERROR = 99
     LOG_WARN  = 98
     LOG_DEVEL = 1
     LOG_DEBUG = 2
     LOG_INFO  = 3
     LOG_ALWAYS= 4
-    
+
     TIMEOUT = 30
-    
+
     tools = baseTools.baseTools()
 
     def __init__(self, config):
@@ -142,19 +144,19 @@ class baseClass (object):
             self._setAttrib(elem_vuln, "postdata", rep.getPostData())
             self._setAttrib(elem_vuln, "kernel", "")
             self._setAttrib(elem_vuln, "language", rep.getLanguage())
-            
+
             headers_pickle = pickle.dumps(rep.getHeader())
             headers_pickle = b64encode(headers_pickle)
             self._setAttrib(elem_vuln, "header_dict", headers_pickle)
-            
+
             self._setAttrib(elem_vuln, "header_vuln_key", rep.getVulnHeader())
-            
+
             os_ = "unix"
             if (rep.isWindows()):
                 os_ = "win"
-            
+
             self._setAttrib(elem_vuln, "os", os_)
-            
+
             if (rep.isRemoteInjectable()):
                 self._setAttrib(elem_vuln, "remote", "1")
             else:
@@ -166,7 +168,7 @@ class baseClass (object):
                 self._setAttrib(elem_vuln, "blind", "0")
 
             self._setAttrib(elem_vuln, "ispost", str(rep.isPost))
-                
+
             self._appendXMLChild(elem, elem_vuln)
             self._appendXMLChild(self.XML_RootItem, elem)
 
@@ -238,7 +240,7 @@ class baseClass (object):
                             if (cc.getAttribute("os") == None or cc.getAttribute("os") == ""):
                                 self._setAttrib(cc, "os", "unix")
                                 toss_warn = True
-                        
+
                         if (toss_warn and not already_warned):
                             self._log("You have an old fimap_result.xml file!", self.LOG_WARN)
                             self._log("I am going to make it sexy for you now very quickly...", self.LOG_WARN)
@@ -249,15 +251,15 @@ class baseClass (object):
             if (os.path.exists(backupfile)):
                 self._log("WARNING: I wanted to backup your old fimap_result to: %s" %(backupfile), self.LOG_WARN)
                 self._log("But this file already exists! Please define a backup path:", self.LOG_WARN)
-                backupfile = raw_input("Backup path: ")
-            print "Creating backup of your original XML to '%s'..." %(backupfile)
+                backupfile = input("Backup path: ")
+            print("Creating backup of your original XML to '%s'..." %(backupfile))
             shutil.copy(self.xmlfile, backupfile)
-            print "Committing changes to orginal XML..."
+            print("Committing changes to orginal XML...")
             self.saveXML()
-            print "All done."
-            print "Please rerun fimap."
+            print("All done.")
+            print("Please rerun fimap.")
             sys.exit(0)
-        
+
     def mergeXML(self, newXML):
         newVulns = newDomains = 0
         doSave = False
@@ -274,20 +276,20 @@ class baseClass (object):
 
                         if (not self.existsXMLEntry(hostname, new_file, new_path)):
                             doSave = True
-                            print "Adding new informations from domain '%s'..." %(hostname)
+                            print("Adding new informations from domain '%s'..." %(hostname))
                             domainNode = self.findDomainNode(hostname)
                             self._appendXMLChild(domainNode, cc)
                             newVulns += 1
                             if (not self.existsDomain(hostname)):
                                 self._appendXMLChild(self.XML_RootItem, domainNode)
                                 newDomains += 1
-                             
+
         if (doSave):
-            print "Saving XML...",
+            print("Saving XML...", end=' ')
             self.saveXML()
-            print "All done."
+            print("All done.")
         return(newVulns, newDomains)
-                    
+
 
     def saveXML(self):
         self._log("Saving results to '%s'..."%self.xmlfile, self.LOG_DEBUG)
@@ -311,7 +313,7 @@ class baseClass (object):
         http = settings["dynamic_rfi"]["ftp"]["http_map"]
         temp = mkstemp()[1]
         hasCreatedDirStruct = False
-        
+
         # Default case return values:
         rethttp = http+ suffix
         retftp  = os.path.join(path, file_) + suffix
@@ -324,7 +326,7 @@ class baseClass (object):
             tmp = self.removeEmptyObjects(suffix.split("/"))
             if suffix.startswith("/"):
                 # Directory starts immediatly
-                directory = os.path.join(file_, tmp[0]) # Concat the first directory to our path 
+                directory = os.path.join(file_, tmp[0]) # Concat the first directory to our path
                 for d in tmp[1:-1]:                     # Join all directorys excluding first and last token.
                     directory = os.path.join(directory, d)
                 suffix = suffix[1:]                     # Remove the leading / from the suffix.
@@ -343,10 +345,10 @@ class baseClass (object):
                 rethttp = settings["dynamic_rfi"]["ftp"]["http_map"]
                 retftp  = settings["dynamic_rfi"]["ftp"]["ftp_path"] + subsuffix
                 hasCreatedDirStruct = True
-            
+
         else:
             file_ = file_ + suffix
-        
+
         # Write payload to local drive
         f = open(temp, "w")
         f.write(content)
@@ -357,7 +359,7 @@ class baseClass (object):
         self._log("Uploading payload (%s) to FTP server '%s'..."%(temp, host), self.LOG_DEBUG)
         ftp = FTP(host, user, pw)
         ftp.cwd(path)
-        
+
         # If the path is in a extra directory, we will take care of it now
         if (directory != None):
             self._log("Creating directory structure '%s'..."%(directory), self.LOG_DEBUG)
@@ -368,7 +370,7 @@ class baseClass (object):
                     self._log("mkdir '%s'..."%(dir_), self.LOG_DEVEL)
                     ftp.mkd(dir_)
                     ftp.cwd(dir_)
-                
+
 
         ftp.storlines("STOR " + file_, f)
         ftp.quit()
@@ -392,17 +394,17 @@ class baseClass (object):
         host = settings["dynamic_rfi"]["ftp"]["ftp_host"]
         user = settings["dynamic_rfi"]["ftp"]["ftp_user"]
         pw   = settings["dynamic_rfi"]["ftp"]["ftp_pass"]
-        if ftp == None: 
+        if ftp == None:
             self._log("Deleting directory recursivly from FTP server '%s'..."%(host), self.LOG_DEBUG)
             ftp = FTP(host, user, pw)
-        
+
         ftp.cwd(directory)
         for i in ftp.nlst(directory):
             try:
                 ftp.delete(i)
             except:
                 self.FTPdeleteDirectory(i, ftp)
-            
+
         ftp.cwd(directory)
         ftp.rmd(directory)
 
@@ -413,7 +415,7 @@ class baseClass (object):
         if (not os.path.exists(dirname)):
             os.makedirs(dirname)
         up = {}
-        
+
         up["local"] = settings["dynamic_rfi"]["local"]["local_path"]
         if append.find("/") != -1 and (not append.startswith("/")):
             up["local"] = settings["dynamic_rfi"]["local"]["local_path"] + append[:append.find("/")]
@@ -421,7 +423,7 @@ class baseClass (object):
         f = open(fl, "w")
         f.write(content)
         f.close()
-        
+
         return(up)
 
     def deleteLocalPayload(self, directory):
@@ -430,7 +432,7 @@ class baseClass (object):
                 shutil.rmtree(directory)
             else:
                 os.remove(directory)
-                
+
 
     def removeEmptyObjects(self, array, empty = ""):
         ret = []
@@ -442,10 +444,10 @@ class baseClass (object):
     def relpath_unix(self, path, start="."):
         # Relpath implementation directly ripped and modified from Python 2.6 source.
         sep="/"
-        
+
         if not path:
             raise ValueError("no path specified")
-        
+
         start_list = posixpath.abspath(start).split(sep)
         path_list = posixpath.abspath(path).split(sep)
         # Work out how much of the filepath is shared by start and path.
@@ -479,7 +481,7 @@ class baseClass (object):
                 break
         else:
             i += 1
-    
+
         rel_list = ['..'] * (len(start_list)-i) + path_list[i:]
         if not rel_list:
             return "."
@@ -553,10 +555,10 @@ class baseClass (object):
 
         socket.setdefaulttimeout(baseClass.TIMEOUT)
 
-
         try:
             b = Browser(agent or DEFAULT_AGENT, proxystring=self.config["p_proxy"])
-
+            # TODO: A user agent default can possibly go here so we don't need specify
+            #       one every single time we run fimap.
             try:
                 if additionalHeaders:
                     b.headers.update(additionalHeaders)
@@ -569,7 +571,7 @@ class baseClass (object):
             finally:
                 del(b)
 
-        except Exception, err:
+        except Exception as err:
             self._log(err, self.LOG_WARN)
 
         return result,headers
@@ -577,12 +579,14 @@ class baseClass (object):
     #def doGetRequest(self, URL, TimeOut=10):
     #def doPostRequest(self, url, Post, TimeOut=10):
 
+
 class BrowserError(Exception):
   def __init__(self, url, error):
     self.url = url
     self.error = error
 
-class PoolHTTPConnection(httplib.HTTPConnection):
+
+class PoolHTTPConnection(http.client.HTTPConnection):
     def connect(self):
         msg = "getaddrinfo returns an empty list"
         for res in socket.getaddrinfo(self.host, self.port, 0, socket.SOCK_STREAM):
@@ -591,18 +595,20 @@ class PoolHTTPConnection(httplib.HTTPConnection):
                 self.sock = socket.socket(af, socktype, proto)
                 self.sock.settimeout(SOCKETTIMEOUT)
                 self.sock.connect(sa)
-            except socket.error, msg:
+            except socket.error as msg:
                 if self.sock:
                     self.sock.close()
                 self.sock = None
                 continue
             break
         if not self.sock:
-            raise socket.error, msg
+            raise socket.error(msg)
 
-class PoolHTTPHandler(urllib2.HTTPHandler):
+
+class PoolHTTPHandler(urllib.request.HTTPHandler):
     def http_open(self, req):
         return self.do_open(PoolHTTPConnection, req)
+
 
 class Browser(object):
     def __init__(self, user_agent=DEFAULT_AGENT, use_pool=False, proxystring=None):
@@ -611,30 +617,29 @@ class Browser(object):
             'Accept-Language': 'en-us,en;q=0.5'}
         self.proxy = proxystring
 
-    def get_page(self, url, data=None, additionalheader = None):
-        proxy_support = urllib2.ProxyHandler({})
+    def get_page(self, url, data=None, additionalheader=None):
+        proxy_support = urllib.request.ProxyHandler({})
         if (self.proxy != None):
-            proxy_support = urllib2.ProxyHandler({'http': self.proxy, 'https': self.proxy})
+            proxy_support = urllib.request.ProxyHandler({'http': self.proxy, 'https': self.proxy})
         handlers = [proxy_support]
 
-        opener = urllib2.build_opener(urllib2.HTTPSHandler(context=ctx), *handlers)
+        opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx), *handlers)
 
         if additionalheader != None:
-            for key, head in additionalheader.items():
+            for key, head in list(additionalheader.items()):
                 opener.addheaders.append((key, head))
 
         ret = None
         headers = None
         response = None
 
-        request = urllib2.Request(url, data, self.headers)
+        request = urllib.request.Request(url, data, self.headers)
         try:
             try:
                 response = opener.open(request)
-                ret = response.read()
-
+                ret = response.read().decode()
                 info = response.info()
-                headers = copy.deepcopy(info.items())
+                headers = copy.deepcopy(list(info.items()))
 
             finally:
                 if response:
@@ -649,4 +654,4 @@ class Browser(object):
         self.headers['User-Agent'] = DEFAULT_AGENT
         return self.headers['User-Agent']
 
-    
+

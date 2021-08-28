@@ -6,4 +6,4 @@
 # This software is licensed as described in the file COPYING.txt,
 # which you should have received as part of this distribution.
 
-from bing import Bing
+from .bing import Bing

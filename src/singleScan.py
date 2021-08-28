@@ -17,13 +17,11 @@
 # or write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
+import sys, time
 
 from baseClass import baseClass
 from targetScanner import targetScanner
-import sys, time
 
-__author__="Iman Karim(ikarim2s@smail.inf.fh-brs.de)"
-__date__ ="$03.09.2009 01:29:37$"
 
 class singleScan(baseClass):
 
@@ -39,31 +37,34 @@ class singleScan(baseClass):
 
     def scan(self):
         try:
-            self.localLog("SingleScan is testing URL: '%s'" %self.URL)
+            self.localLog("[*] SingleScan is testing URL: '%s'" %self.URL)
+            self._log("singleScan :: print current config:\n {}".format(self.config), self.LOG_DEBUG)
             t = targetScanner(self.config)
             t.MonkeyTechnique = self.config["p_monkeymode"]
 
             idx = 0
+            # This returns true if we have more than 0 params we can test
             if (t.prepareTarget(self.URL)):
+                # This returns true if
                 res = t.testTargetVuln()
                 if (len(res) == 0):
-                    self.localLog("Target URL isn't affected by any file inclusion bug :(")
+                    self.localLog("[*] Target URL isn't affected by any file inclusion bug :(")
                 else:
                     for i in res:
                         report = i[0]
                         files = i[1]
                         idx = idx +1
                         boxarr = []
-                        header = "[%d] Possible File Inclusion"%(idx)
+                        header = "[%d] Possible File Inclusion" % (idx)
                         if (report.getLanguage() != None):
                             header = "[%d] Possible %s-File Inclusion"%(idx, report.getLanguage())
                         boxarr.append("::REQUEST")
                         boxarr.append("  [URL]        %s"%report.getURL())
                         if (report.getPostData() != None and report.getPostData() != ""): boxarr.append("  [POST]       %s"%report.getPostData())
-                        if (report.getHeader() != None and report.getHeader().keys() > 0):
-                            modkeys = ",".join(report.getHeader().keys())
+                        if (report.getHeader() != None and list(report.getHeader().keys()) > 0):
+                            modkeys = ",".join(list(report.getHeader().keys()))
                             boxarr.append("  [HEAD SENT]  %s"%(modkeys))
-                        
+
                         boxarr.append("::VULN INFO")
                         if (report.isPost == 0):
                             boxarr.append("  [GET PARAM]  %s"%report.getVulnKey())
@@ -81,7 +82,7 @@ class singleScan(baseClass):
                             boxarr.append("  [OS]         Unix")
                         else:
                             boxarr.append("  [OS]         Windows")
-                            
+
                         boxarr.append("  [TYPE]       %s"%report.getType())
                         if (not report.isBlindDiscovered()):
                             if (report.isSuffixBreakable() == None):
@@ -117,8 +118,8 @@ class singleScan(baseClass):
                         self.drawBox(header, boxarr)
         except KeyboardInterrupt:
             if (self.quite): # We are in google mode.
-                print "\nCancelled current target..."
-                print "Press CTRL+C again in the next second to terminate fimap."
+                print("\nCancelled current target...")
+                print("Press CTRL+C again in the next second to terminate fimap.")
                 try:
                     time.sleep(1)
                 except KeyboardInterrupt:
@@ -127,4 +128,4 @@ class singleScan(baseClass):
                 raise
     def localLog(self, txt):
         if (not self.quite):
-            print txt
+            print(txt)

